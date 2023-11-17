@@ -1,0 +1,86 @@
+minikube config set memory 4096
+minikube config set cpus 4
+minikube start
+
+
+
+
+kubectl create namespace kafka
+
+helm upgrade --install kafka-release strimzi/strimzi-kafka-operator --namespace kafka --create-namespace
+OR
+kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
+
+kubectl apply -f cluster.yml -n kafka
+
+kubectl apply -f kafka_user2.yml -n kafka
+
+kubectl get secret/test-kafka-user -n kafka -o yaml
+
+kubectl get secret test-kafka-user -n kafka -o jsonpath='{.data.password}' | base64 --decode > user.password
+
+kubectl get secret my-cluster-cluster-ca-cert -o jsonpath='{.data.ca\.crt}' -n kafka | base64 --decode > ca.p12
+
+kubectl get secret my-cluster-cluster-ca-cert -o jsonpath='{.data.ca\.password}' -n kafka | base64 --decode > ca.password
+
+kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.38.0-kafka-3.6.0 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server my-cluster-kafka-bootstrap:9092 --topic my-topic
+
+kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.38.0-kafka-3.6.0 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server my-cluster-kafka-bootstrap:9092 --topic my-topic --from-beginning
+
+
+kubectl cp ca.p12 kafka-producer:/tmp -n kafka
+kubectl cp ca.p12 kafka-consumer:/tmp -n kafka
+
+<<apply in both producer and consumer>>
+
+cp $JAVA_HOME/lib/security/cacerts /tmp/cacerts
+
+chmod 777 /tmp/cacerts
+
+keytool -importcert -alias strimzi-kafka-cert -file /tmp/ca.p12 -keystore /tmp/cacerts -keypass <password from ca.password file> -storepass changeit -noprompt
+
+<</>>
+
+vim producer.properties #also create for consumer
+>>
+
+security.protocol=SASL_SSL
+sasl.mechanism=SCRAM-SHA-512
+sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="test-kafka-user" password="<password from user.password file>";
+ssl.truststore.location=/tmp/cacerts
+ssl.truststore.password=changeit
+
+<<
+
+kubectl cp producer.properties kafka-producer:/tmp -n kafka
+kubectl cp consumer.properties kafka-consumer:/tmp -n kafka
+
+
+
+#run the below command in kafka producer container
+bin/kafka-console-producer.sh --bootstrap-server my-cluster-2-kafka-bootstrap:9092 --topic my-topic --producer.config /tmp/producer.properties
+> type messages
+> Hello
+
+#run the below command in kafka consumer container
+bin/kafka-console-consumer.sh --bootstrap-server my-cluster-kafka-bootstrap:9092 --topic my-topic --from-beginning
+> Output
+> Hello
+
+
+get broker info:
+kubectl describe kafka/my-cluster -n kafka
+
+important link:
+https://www.infoq.com/articles/strimzi-the-gitops-way/
+
+
+
+
+
+
+
+
+
+
+
