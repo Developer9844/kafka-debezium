@@ -22,14 +22,10 @@ spec:
     offset.storage.topic: connect-cluster-offsets
     config.storage.topic: connect-cluster-configs
     status.storage.topic: connect-cluster-status
-    security.protocol: SASL_SSL
-    sasl.mechanism: SCRAM-SHA-512
-    sasl.jaas.config: 'org.apache.kafka.common.security.scram.ScramLoginModule required username="test-kafka-user" password="U2SNswn6WLZXfW2aOXnTOmhilgTvU2hm";'
-    
     config.storage.replication.factor: 1
     offset.storage.replication.factor: 1
     status.storage.replication.factor: 1
-    ssl.truststore.location: /etc/kafka/cluster.truststore.p12
+    
     
 
 

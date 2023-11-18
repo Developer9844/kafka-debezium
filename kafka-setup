@@ -78,9 +78,187 @@ https://www.infoq.com/articles/strimzi-the-gitops-way/
 
 
 
+cat <<EOF | kubectl -n postgres apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: postgres-deployment-2
+spec:
+ selector:
+   matchLabels:
+     app: postgres-container-2
+ template:
+   metadata:
+     labels:
+       app: postgres-container-2
+   spec:
+     containers:
+       - name: postgres-container-2
+         image: debezium/example-postgres:1.0
+         ports:
+           - containerPort: 5432
+         env:
+           - name: POSTGRES_USER
+             value: engineer
+           - name: POSTGRES_PASSWORD
+             value: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: postgres-2
+spec:
+ ports:
+   - port: 5432
+ selector:
+   app: postgres-container-2
+EOF
 
 
 
+*Install the strimzi operator:
+# curl -L https://github.com/strimzi/strimzi-kafka-operator/releases/download/0.38.0/strimzi-cluster-operator-0.38.0.yaml | sed 's/namespace: .*/namespace: kafka/' | kubectl apply -f - -n kafka
+
+*Create a single broker Kafka cluster:
+# kubectl -n kafka apply -f https://raw.githubusercontent.com/strimzi/strimzi-kafka-operator/0.38.0/examples/kafka/kafka-persistent-single.yaml
+
+
+*Create the KafkaConnect:
+
+cat <<EOF | kubectl -n kafka apply -f -
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnect
+metadata:
+  name: postgres-connect-cluster
+  annotations:
+    strimzi.io/use-connector-resources: "false"
+spec:
+  image: ehsaniara/postgres-connect-debezium:latest
+  replicas: 1
+#  imagePullPolicy: Always
+  bootstrapServers: my-cluster-kafka-bootstrap:9093
+  tls:
+    trustedCertificates:
+      - secretName: my-cluster-cluster-ca-cert
+        certificate: ca.crt
+  config:
+    config.storage.replication.factor: 1
+    offset.storage.replication.factor: 1
+    status.storage.replication.factor: 1
+    config.providers: file
+    config.providers.file.class: org.apache.kafka.common.config.provider.FileConfigProvider
+EOF
+
+
+*Create Postgres Connector:
+once the Kafka Connect started you can run the following CURL command to create a connector to your Postgres database.
+
+But, before that you should be able to access to the Kafka Connect through your local pc, so you need to run the following line:
+
+# kubectl -n kafka port-forward svc/postgres-connect-cluster-connect-api 8083:8083
 
 
 
+*then run the following command:
+curl --location --request POST 'http://localhost:8083/connectors/' \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "name": "sde-connector",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "database.hostname": "postgres.postgres",
+        "database.port": "5432",
+        "tasks.max": "1",
+        "database.user": "data_engineer",
+        "database.password": "password",
+        "database.dbname": "data_engineer",
+        "database.server.name": "server1",
+        "database.history.kafka.bootstrap.servers": "my-cluster-kafka-bootstrap:9093",
+        "database.history.kafka.topic": "schema-changes.inventory",
+        "database.whitelist": "inventory",
+        "include.schema.changes": true,
+        "database.server.id": "184054"
+    }
+}'
+
+
+---------------------------------------------------------------------------
+
+
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnector
+metadata:
+ name: debezium-connector-mysql
+ labels:
+   strimzi.io/cluster: debezium-connect-cluster
+spec:
+ class: io.debezium.connector.mysql.MySqlConnector
+ tasksMax: 1
+ config:
+   tasks.max: 1
+   database.hostname: mysql
+   database.port: 3306
+   database.user: root
+   database.password: alex
+   database.server.id: 184054
+   database.server.name: mysql
+   database.include.list: moviesdb
+   database.allowPublicKeyRetrieval: true
+   table.include.list: moviesdb.OutboxEvent
+   database.history.kafka.bootstrap.servers: my-cluster-kafka-bootstrap:9092
+   database.history.kafka.topic: schema-changes.movies
+   
+
+   
+
+
+curl --location --request POST 'http://localhost:8083/connectors/' \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "name": "sdb-connector",
+    "config": {
+        "tasks.max": "1",
+        "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+        "database.hostname": "mysql",
+        "database.port": "3306",
+        "database.user": "root",
+        "database.password": "alex",
+        "database.dbname": "moviesdb",
+        "database.server.name": "mysql",
+        "database.history.kafka.bootstrap.servers": "my-cluster-kafka-bootstrap:9093",
+        "database.allowPublicKeyRetrieval": true,
+        "table.include.list": "moviesdb.OutboxEvent",
+        "database.history.kafka.topic": "schema-changes.movies",
+        "database.whitelist": "movies",
+        "include.schema.changes": true,
+        "database.server.id": "184054"
+    }
+}'
+
+
+   
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnect
+metadata:
+ name: debezium-connect-cluster
+ annotations:
+   strimzi.io/use-connector-resources: "true"
+spec:
+ version: 3.2.0
+ image: quay.io/lordofthejars/debezium-connector-mysql:1.9.4
+ replicas: 1
+ bootstrapServers: my-cluster-kafka-bootstrap:9092
+ config:
+   group.id: connect-cluster
+   key.converter: org.apache.kafka.connect.json.JsonConverter
+   value.converter: org.apache.kafka.connect.json.JsonConverter
+   key.converter.schemas.enable: false
+   value.converter.schemas.enable: false
+   offset.storage.topic: connect-offsets
+   offset.storage.replication.factor: 1
+   config.storage.topic: connect-configs
+   config.storage.replication.factor: 1
+   status.storage.topic: connect-status
+   status.storage.replication.factor: 1
