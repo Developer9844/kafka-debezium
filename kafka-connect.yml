@@ -1,14 +1,10 @@
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaConnect
 metadata:
-  name: my-connect-cluster
+  name: postgres-connect-cluster
   annotations:
-#  # use-connector-resources configures this KafkaConnect
-#  # to use KafkaConnector resources to avoid
-#  # needing to call the Connect REST API directly
-    strimzi.io/use-connector-resources: "false"
+    strimzi.io/use-connector-resources: "true"
 spec:
-  version: 3.6.0
   image: ehsaniara/postgres-connect-debezium:latest
   replicas: 1
 #  imagePullPolicy: Always
@@ -16,15 +12,13 @@ spec:
   tls:
     trustedCertificates:
       - secretName: my-cluster-cluster-ca-cert
-        certificate: ca.p12
+        certificate: ca.crt
   config:
-    group.id: connect-cluster
-    offset.storage.topic: connect-cluster-offsets
-    config.storage.topic: connect-cluster-configs
-    status.storage.topic: connect-cluster-status
     config.storage.replication.factor: 1
     offset.storage.replication.factor: 1
     status.storage.replication.factor: 1
+    config.providers: file
+    config.providers.file.class: org.apache.kafka.common.config.provider.FileConfigProvider
     
     
 
