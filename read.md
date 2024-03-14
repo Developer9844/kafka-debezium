@@ -1,6 +1,7 @@
 kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n
 
-
+# create kafka namespace
+kubectl create namespace kafka
 
 # create secret file for docker creds
 kubectl create secret generic regcred \

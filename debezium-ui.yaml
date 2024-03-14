@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: debezium-ui-service
+spec:
+  selector:
+    app: debezium-ui
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debezium-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debezium-ui
+  template:
+    metadata:
+      labels:
+        app: debezium-ui
+    spec:
+      containers:
+      - name: debezium-ui
+        image: quay.io/debezium/debezium-ui:latest
+        ports:
+        - containerPort: 8000
+        env:
+          - name: KAFKA_CLUSTERS_0_NAME
+            value: local
+          - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+            value: my-cluster-kafka-bootstrap:9092
+          - name: KAFKA_CLUSTERS_0_ZOOKEEPER
+            value: my-cluster-zookeeper-client:2181
+          - name: KAFKA_CONNECT_URIS
+            value: http://debezium-connect-cluster-connect-api:8083
