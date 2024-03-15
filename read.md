@@ -1,4 +1,4 @@
-kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n
+kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
 
 # create kafka namespace
 kubectl create namespace kafka

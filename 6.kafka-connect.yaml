@@ -2,11 +2,12 @@ apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaConnect
 metadata:
   name: debezium-connect-cluster
+  namespace: kafka
   annotations:
     strimzi.io/use-connector-resources: "true"
 spec:
-  version: 3.6.1
-  image: index.docker.io/developer9844/kafka-connect-example:2.0
+  version: 3.7.0
+  image: index.docker.io/developer9844/kafka-connect-example:3.0
   replicas: 1
   bootstrapServers: my-cluster-kafka-bootstrap:9093
   tls:

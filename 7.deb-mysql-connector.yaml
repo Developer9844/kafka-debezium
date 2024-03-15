@@ -2,6 +2,7 @@ apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaConnector
 metadata:
   name: debezium-mysql-connector
+  namespace: kafka
   labels:
     strimzi.io/cluster: debezium-connect-cluster
 spec:
@@ -9,7 +10,7 @@ spec:
   tasksMax: 1
   config:
     tasks.max: 1
-    database.hostname: mysql.default.svc.cluster.local
+    database.hostname: mysql.kafka.svc.cluster.local
     database.port: 3306
     database.user: root
     database.password: debezium
