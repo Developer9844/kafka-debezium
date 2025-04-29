@@ -6,14 +6,14 @@ metadata:
   annotations:
     strimzi.io/use-connector-resources: "true"
 spec:
-  version: 3.7.0
+  version: 3.9.0
   image: index.docker.io/developer9844/kafka-connect-example:3.0
   replicas: 1
-  bootstrapServers: my-cluster-kafka-bootstrap:9093
-  tls:
-    trustedCertificates:
-      - secretName: my-cluster-cluster-ca-cert
-        certificate: ca.crt
+  bootstrapServers: my-cluster-kafka-bootstrap:9092
+  # tls:
+  #   trustedCertificates:
+  #     - secretName: my-cluster-cluster-ca-cert
+  #       certificate: ca.crt
   config:
     group.id: connect-cluster
     offset.storage.topic: connect-cluster-offsets

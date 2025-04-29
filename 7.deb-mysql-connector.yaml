@@ -12,8 +12,8 @@ spec:
     tasks.max: 1
     database.hostname: mysql.kafka.svc.cluster.local
     database.port: 3306
-    database.user: root
-    database.password: debezium
+    database.user: ${secrets:database/mysql-secret:username}
+    database.password: ${secrets:database/mysql-secret:password}
     database.server.id: 223344
     database.server.name: mysql
     topic: my-topic
