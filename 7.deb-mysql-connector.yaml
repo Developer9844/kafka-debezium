@@ -10,17 +10,17 @@ spec:
   tasksMax: 1
   config:
     tasks.max: 1
-    database.hostname: mysql.kafka.svc.cluster.local
+    database.hostname: mysql.database.svc.cluster.local
     database.port: 3306
-    database.user: ${secrets:database/mysql-secret:username}
-    database.password: ${secrets:database/mysql-secret:password}
+    database.user: root
+    database.password: root
     database.server.id: 223344
     database.server.name: mysql
-    topic: my-topic
+    topic: authapp
     topic.prefix: mysql
-    database.include.list: inventory  # database name
+    database.include.list: auth_app  # database name
     schema.history.internal.kafka.bootstrap.servers: my-cluster-kafka-bootstrap:9092
-    schema.history.internal.kafka.topic: schema-changes.inventory
+    schema.history.internal.kafka.topic: schema-changes.auth_app
     
 
 
